@@ -19,6 +19,8 @@ namespace stan {
 namespace math {
 namespace internal {
 
+//static int counter = 0;
+
 /**
  * Var specialization of implimentation called by reduce `reduce_sum`.
  * @tparam ReduceFunction An type with a valid `operator()`
@@ -32,58 +34,6 @@ template <typename ReduceFunction, typename ReturnType, typename Vec,
           typename... Args>
 struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
                        Vec, Args...> {
-
-
-  /**
-   * Internal object used in `tbb::parallel_reduce`
-   * @note see link [here](https://tinyurl.com/vp7xw2t) for requirements.
-   */
-  struct recursive_reducer {
-    size_t per_job_sliced_terms_;
-    size_t num_shared_terms_;  // Number of terms shared across threads
-    double* sliced_partials_;  // Points to adjoints of the partial calculations
-    Vec vmapped_;
-    std::ostream* msgs_;
-    std::tuple<Args...> args_tuple_;
-    double sum_{0.0};
-    Eigen::VectorXd args_adjoints_{0};
-
-    template <typename TupleT>
-    struct local_args {
-      const nested_rev_autodiff nested_context_;
-      // not sure what the type is of the apply below => this gives a
-      // compiler error, but auto type is not allowed
-      std::tuple<std::decay_t<Args>...>  args_tuple_copy_;
-
-      local_args(TupleT args_tuple) :
-          nested_context_(),
-          args_tuple_copy_(
-              apply(
-                  [&](auto&&... args) {
-                    return std::tuple<decltype(deep_copy(args))...>(deep_copy(args)...);
-                  },
-                  std::forward<TupleT>(args_tuple))) {
-      }
-    };
-
-    template <typename VecT, typename... ArgsT>
-    recursive_reducer(size_t per_job_sliced_terms, size_t num_shared_terms,
-                      double* sliced_partials, VecT&& vmapped,
-                      std::ostream* msgs, ArgsT&&... args)
-        : per_job_sliced_terms_(per_job_sliced_terms),
-          num_shared_terms_(num_shared_terms),
-          sliced_partials_(sliced_partials),
-          vmapped_(std::forward<VecT>(vmapped)),
-          msgs_(msgs),
-          args_tuple_(std::forward<ArgsT>(args)...) {}
-
-    recursive_reducer(recursive_reducer& other, tbb::split)
-        : per_job_sliced_terms_(other.per_job_sliced_terms_),
-          num_shared_terms_(other.num_shared_terms_),
-          sliced_partials_(other.sliced_partials_),
-          vmapped_(other.vmapped_),
-          msgs_(other.msgs_),
-          args_tuple_(other.args_tuple_) {}
 
     /**
      * Specialization of deep copy that returns references for arithmetic types.
@@ -145,6 +95,84 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
           .unaryExpr([](auto&& x) { return var(new vari(x.val(), false)); })
           .eval();
     }
+
+
+
+    class local_args {
+      const nested_rev_autodiff nested_context_;
+      // not sure what the type is of the apply below => this gives a
+      // compiler error, but auto type is not allowed
+      using args_tuple_copy_t = std::tuple<std::decay_t<Args>...>;
+      //int num_instance;
+      args_tuple_copy_t args_tuple_copy_;
+      bool is_dirty_;
+
+     public:
+      template <typename... ArgsT>
+      local_args(ArgsT&&... args) :
+          nested_context_(),
+          //num_instance(counter++),
+          args_tuple_copy_(std::tuple<decltype(deep_copy(args))...>(deep_copy(args)...)),
+          is_dirty_(false)
+      {
+        //std::cout << "creating shared copy " << num_instance << " in thread " << std::this_thread::get_id() << std::endl;
+      }
+
+      args_tuple_copy_t& get_clean_copy() {
+        // for now just assume that we can zero out the adjoints
+        // correctly with this call... but we have to loop over each
+        // var stored in the tuple copy to make this safe
+        if(is_dirty_)
+          set_zero_all_adjoints_nested();
+        is_dirty_ = true;
+        return args_tuple_copy_;
+      }
+
+      /*
+      ~local_args() {
+        std::cout << "destroying shared copy " << num_instance << " in thread " << std::this_thread::get_id() << std::endl;
+      }
+      */
+    };
+
+  using local_args_t = local_args;
+  using tls_local_args_t = tbb::enumerable_thread_specific< local_args_t >;
+
+
+  
+  /**
+   * Internal object used in `tbb::parallel_reduce`
+   * @note see link [here](https://tinyurl.com/vp7xw2t) for requirements.
+   */
+  struct recursive_reducer {
+    size_t per_job_sliced_terms_;
+    size_t num_shared_terms_;  // Number of terms shared across threads
+    double* sliced_partials_;  // Points to adjoints of the partial calculations
+    Vec vmapped_;
+    std::ostream* msgs_;
+    tls_local_args_t& tls_args_tuple_;
+    //std::tuple<Args...> args_tuple_;
+    double sum_{0.0};
+    Eigen::VectorXd args_adjoints_{0};
+
+    template <typename VecT>
+    recursive_reducer(size_t per_job_sliced_terms, size_t num_shared_terms,
+                      double* sliced_partials, VecT&& vmapped,
+                      std::ostream* msgs, tls_local_args_t& tls_args_tuple)
+        : per_job_sliced_terms_(per_job_sliced_terms),
+          num_shared_terms_(num_shared_terms),
+          sliced_partials_(sliced_partials),
+          vmapped_(std::forward<VecT>(vmapped)),
+          msgs_(msgs),
+          tls_args_tuple_(tls_args_tuple) {}
+
+    recursive_reducer(recursive_reducer& other, tbb::split)
+        : per_job_sliced_terms_(other.per_job_sliced_terms_),
+          num_shared_terms_(other.num_shared_terms_),
+          sliced_partials_(other.sliced_partials_),
+          vmapped_(other.vmapped_),
+          msgs_(other.msgs_),
+          tls_args_tuple_(other.tls_args_tuple_) {}
 
     /**
      * Accumulates adjoints for a single var within the reduce.
@@ -248,9 +276,13 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
         args_adjoints_ = Eigen::VectorXd::Zero(this->num_shared_terms_);
       }
 
-      local_args<decltype(args_tuple_)> local(args_tuple_);
-
-      //const nested_rev_autodiff begin_nest;
+      //local_args<decltype(args_tuple_)> local(args_tuple_);
+      //local_args::args_tuple_copy_t& args_tuple_local_copy =
+      //tls_args_tuple_.local().args_tuple_copy_;
+      auto& args_tuple_local_copy = tls_args_tuple_.local().get_clean_copy();
+      // todo: zero adjoints of args_tuple_local as needed
+    
+      const nested_rev_autodiff begin_nest;
 
       // create a deep copy of all var's so that these are not
       // linked to any outer AD tree
@@ -259,6 +291,7 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
       for (int i = r.begin(); i < r.end(); ++i) {
         local_sub_slice.emplace_back(deep_copy(vmapped_[i]));
       }
+      
       /*
       auto args_tuple_local_copy = apply(
           [&](auto&&... args) {
@@ -266,12 +299,14 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
           },
           this->args_tuple_);
       */
+      
       var sub_sum_v = apply(
           [&](auto&&... args) {
             return ReduceFunction()(r.begin(), r.end() - 1, local_sub_slice,
                                     this->msgs_, args...);
           },
-          local.args_tuple_copy_);
+          args_tuple_local_copy);
+      //local.args_tuple_copy_);
 
       sub_sum_v.grad();
       sum_ += sub_sum_v.val();
@@ -283,7 +318,9 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
             return accumulate_adjoints(args_adjoints_.data(),
                                        std::forward<decltype(args)>(args)...);
           },
-          std::move(local.args_tuple_copy_));
+          std::forward<decltype(tls_args_tuple_.local().get_clean_copy())>(args_tuple_local_copy));
+      // SW: Why did we use a move here? I hope forward is also fine.
+      //std::move(local.args_tuple_copy_));
       //std::move(args_tuple_local_copy));
     }
 
@@ -519,28 +556,39 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
     for (size_t i = 0; i < num_sliced_terms; ++i) {
       partials[i] = 0.0;
     }
-    recursive_reducer worker(per_job_sliced_terms, num_shared_terms, partials,
-                             vmapped, msgs, args...);
+
+    double sum = 0.0;
+
+    {
+      //std::tuple<OpArgs...> args_tuple(std::forward<OpArgs>(args)...);
+      tls_local_args_t tls_local_args(std::forward<OpArgs>(args)...);
+    
+      recursive_reducer worker(per_job_sliced_terms, num_shared_terms, partials,
+                               vmapped, msgs, tls_local_args);
+      //vmapped, msgs, args...);
 
 #ifdef STAN_DETERMINISTIC
-    tbb::inline_partitioner partitioner;
-    tbb::parallel_deterministic_reduce(
-        tbb::blocked_range<std::size_t>(0, num_jobs, grainsize), worker,
-        partitioner);
+      tbb::inline_partitioner partitioner;
+      tbb::parallel_deterministic_reduce(
+          tbb::blocked_range<std::size_t>(0, num_jobs, grainsize), worker,
+          partitioner);
 #else
-    tbb::parallel_reduce(
-        tbb::blocked_range<std::size_t>(0, num_jobs, grainsize), worker);
+      tbb::parallel_reduce(
+          tbb::blocked_range<std::size_t>(0, num_jobs, grainsize), worker);
 #endif
 
-    save_varis(varis, std::forward<OpVec>(vmapped));
-    save_varis(varis + num_sliced_terms, std::forward<OpArgs>(args)...);
+      save_varis(varis, std::forward<OpVec>(vmapped));
+      save_varis(varis + num_sliced_terms, std::forward<OpArgs>(args)...);
+      
+      for (size_t i = 0; i < num_shared_terms; ++i) {
+        partials[num_sliced_terms + i] = worker.args_adjoints_(i);
+      }
 
-    for (size_t i = 0; i < num_shared_terms; ++i) {
-      partials[num_sliced_terms + i] = worker.args_adjoints_(i);
+      sum = worker.sum_;
     }
-
+      
     return var(new precomputed_gradients_vari(
-        worker.sum_, num_sliced_terms + num_shared_terms, varis, partials));
+        sum, num_sliced_terms + num_shared_terms, varis, partials));
   }
 };
 }  // namespace internal
