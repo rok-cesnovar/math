@@ -17,9 +17,39 @@
 
 namespace stan {
 namespace math {
+
+// we have to be able to tear down the nested context of a specified context
+static inline void recover_memory_nested(ChainableStack::AutodiffStackStorage* instance) {
+  if (instance->nested_var_stack_sizes_.empty()) {
+    throw std::logic_error(
+        "empty_nested() must be false"
+        " before calling recover_memory_nested()");
+  }
+
+  instance->var_stack_.resize(
+      instance->nested_var_stack_sizes_.back());
+  instance->nested_var_stack_sizes_.pop_back();
+
+  instance->var_nochain_stack_.resize(
+      instance->nested_var_nochain_stack_sizes_.back());
+  instance->nested_var_nochain_stack_sizes_.pop_back();
+
+  for (size_t i
+       = instance->nested_var_alloc_stack_starts_.back();
+       i < instance->var_alloc_stack_.size(); ++i) {
+    delete instance->var_alloc_stack_[i];
+  }
+  instance->var_alloc_stack_.resize(
+      instance->nested_var_alloc_stack_starts_.back());
+  instance->nested_var_alloc_stack_starts_.pop_back();
+
+  instance->memalloc_.recover_nested();
+}
+
+
 namespace internal {
 
-//static int counter = 0;
+static int counter = 0;
 
 /**
  * Var specialization of implimentation called by reduce `reduce_sum`.
@@ -99,23 +129,27 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
 
 
     class local_args {
-      const nested_rev_autodiff nested_context_;
+      //const nested_rev_autodiff nested_context_;
       // not sure what the type is of the apply below => this gives a
       // compiler error, but auto type is not allowed
       using args_tuple_copy_t = std::tuple<std::decay_t<Args>...>;
-      //int num_instance;
+      int num_instance;
       args_tuple_copy_t args_tuple_copy_;
+      ChainableStack::AutodiffStackStorage* instance_;
       bool is_dirty_;
 
      public:
       template <typename... ArgsT>
       local_args(ArgsT&&... args) :
-          nested_context_(),
-          //num_instance(counter++),
-          args_tuple_copy_(std::tuple<decltype(deep_copy(args))...>(deep_copy(args)...)),
+          num_instance(counter++),
+          instance_(ChainableStack::instance_),
+          //args_tuple_copy_(std::tuple<decltype(deep_copy(args))...>(deep_copy(args)...)),
           is_dirty_(false)
       {
-        //std::cout << "creating shared copy " << num_instance << " in thread " << std::this_thread::get_id() << std::endl;
+        start_nested();
+        
+        args_tuple_copy_ = std::tuple<decltype(deep_copy(args))...>(deep_copy(args)...);
+        std::cout << "creating shared copy " << num_instance << " in thread " << std::this_thread::get_id() << std::endl;
       }
 
       args_tuple_copy_t& get_clean_copy() {
@@ -128,11 +162,10 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
         return args_tuple_copy_;
       }
 
-      /*
       ~local_args() {
         std::cout << "destroying shared copy " << num_instance << " in thread " << std::this_thread::get_id() << std::endl;
+        recover_memory_nested(instance_);
       }
-      */
     };
 
   using local_args_t = local_args;
@@ -282,7 +315,7 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
       auto& args_tuple_local_copy = tls_args_tuple_.local().get_clean_copy();
       // todo: zero adjoints of args_tuple_local as needed
     
-      const nested_rev_autodiff begin_nest;
+      //const nested_rev_autodiff begin_nest;
 
       // create a deep copy of all var's so that these are not
       // linked to any outer AD tree
