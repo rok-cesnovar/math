@@ -49,7 +49,7 @@ static inline void recover_memory_nested(ChainableStack::AutodiffStackStorage* i
 
 namespace internal {
 
-static int counter = 0;
+//static int counter = 0;
 
 /**
  * Var specialization of implimentation called by reduce `reduce_sum`.
@@ -133,7 +133,7 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
       // not sure what the type is of the apply below => this gives a
       // compiler error, but auto type is not allowed
       using args_tuple_copy_t = std::tuple<std::decay_t<Args>...>;
-      int num_instance;
+      //int num_instance;
       args_tuple_copy_t args_tuple_copy_;
       ChainableStack::AutodiffStackStorage* instance_;
       bool is_dirty_;
@@ -141,7 +141,7 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
      public:
       template <typename... ArgsT>
       local_args(ArgsT&&... args) :
-          num_instance(counter++),
+          //num_instance(counter++),
           instance_(ChainableStack::instance_),
           //args_tuple_copy_(std::tuple<decltype(deep_copy(args))...>(deep_copy(args)...)),
           is_dirty_(false)
@@ -149,22 +149,29 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
         start_nested();
         
         args_tuple_copy_ = std::tuple<decltype(deep_copy(args))...>(deep_copy(args)...);
-        std::cout << "creating shared copy " << num_instance << " in thread " << std::this_thread::get_id() << std::endl;
+        //std::cout << "creating shared copy " << num_instance << " in thread " << std::this_thread::get_id() << std::endl;
       }
 
       args_tuple_copy_t& get_clean_copy() {
         // for now just assume that we can zero out the adjoints
         // correctly with this call... but we have to loop over each
         // var stored in the tuple copy to make this safe
-        if(is_dirty_)
+        if(is_dirty_) {
+          ChainableStack::AutodiffStackStorage* local_instance = ChainableStack::instance_;
+          ChainableStack::instance_ = instance_;
           set_zero_all_adjoints_nested();
+          ChainableStack::instance_ = local_instance;
+        }
         is_dirty_ = true;
         return args_tuple_copy_;
       }
 
       ~local_args() {
-        std::cout << "destroying shared copy " << num_instance << " in thread " << std::this_thread::get_id() << std::endl;
-        recover_memory_nested(instance_);
+        //std::cout << "destroying shared copy " << num_instance << " in thread " << std::this_thread::get_id() << std::endl;
+        ChainableStack::AutodiffStackStorage* local_instance = ChainableStack::instance_;
+        ChainableStack::instance_ = instance_;
+        recover_memory_nested();
+        ChainableStack::instance_ = local_instance;
       }
     };
 
