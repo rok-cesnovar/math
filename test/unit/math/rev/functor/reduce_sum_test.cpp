@@ -116,7 +116,7 @@ struct nesting_count_lpdf {
   }
 };
 
-
+/*
 TEST(StanMathRev_reduce_sum, nesting_gradient) {
   stan::math::init_threadpool_tbb();
 
@@ -164,7 +164,7 @@ TEST(StanMathRev_reduce_sum, nesting_gradient) {
 
   stan::math::recover_memory();
 }
-
+*/
 
 // ********************************
 // basic performance test for a hierarchical model

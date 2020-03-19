@@ -18,7 +18,9 @@
 namespace stan {
 namespace math {
 
-// we have to be able to tear down the nested context of a specified context
+// we have to be able to tear down the nested context of a specified
+// context
+// absolete...luckily
 static inline void recover_memory_nested(ChainableStack::AutodiffStackStorage* instance) {
   if (instance->nested_var_stack_sizes_.empty()) {
     throw std::logic_error(
@@ -65,6 +67,27 @@ template <typename ReduceFunction, typename ReturnType, typename Vec,
 struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
                        Vec, Args...> {
 
+  /**
+   * the local context can be used to store var's which are the roots
+   * of a reverse mode autodiff call. The local context manages it's
+   * own memory for the vari's on the heap. var's can be copied onto
+   * it with the deep_copy function.
+   */
+  struct local_context {
+    ChainableStack::AutodiffStackStorage instance_;
+
+    struct local_vari : public vari {
+      
+      local_vari(ChainableStack::AutodiffStackStorage& stack, double x, bool stacked)
+          : vari(stack, x, stacked) { }
+      // todo: take care of memory pool / new operator
+      //static inline void* operator new(size_t nbytes) {
+      //  return ChainableStack::instance_->memalloc_.alloc(nbytes);
+      //}
+   };
+
+    std::vector<local_vari> vari_store_;
+    
     /**
      * Specialization of deep copy that returns references for arithmetic types.
      * @tparam Arith an arithmetic type.
@@ -73,7 +96,7 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
      */
     template <typename Arith,
               typename = require_arithmetic_t<scalar_type_t<Arith>>>
-    static inline decltype(auto) deep_copy(Arith&& arg) {
+    inline decltype(auto) deep_copy(Arith&& arg) {
       return std::forward<Arith>(arg);
     }
 
@@ -81,8 +104,9 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
      * Specialization to copy a single var
      * @param arg a var.
      */
-    static inline auto deep_copy(const var& arg) {
-      return var(new vari(arg.val(), false));
+    inline auto deep_copy(const var& arg) {
+      vari_store_.emplace_back(instance_, arg.val(), false);
+      return var(&vari_store_.back());
     }
 
     /**
@@ -91,10 +115,11 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
      * @param arg A standard vector holding vars.
      */
     template <typename VarVec, require_std_vector_vt<is_var, VarVec>* = nullptr>
-    static inline auto deep_copy(VarVec&& arg) {
+     inline auto deep_copy(VarVec&& arg) {
       std::vector<var> copy_vec(arg.size());
       for (size_t i = 0; i < arg.size(); ++i) {
-        copy_vec[i] = new vari(arg[i].val(), false);
+        vari_store_.emplace_back(instance_, arg[i].val(), false);
+        copy_vec[i] = &vari_store_.back();
       }
       return copy_vec;
     }
@@ -106,7 +131,7 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
      */
     template <typename VarVec, require_std_vector_st<is_var, VarVec>* = nullptr,
               require_std_vector_vt<is_container, VarVec>* = nullptr>
-    static inline auto deep_copy(VarVec&& arg) {
+     inline auto deep_copy(VarVec&& arg) {
       std::vector<value_type_t<VarVec>> copy_vec(arg.size());
       for (size_t i = 0; i < arg.size(); ++i) {
         copy_vec[i] = deep_copy(arg[i]);
@@ -120,14 +145,112 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
      * @param arg A container hollding var types.
      */
     template <typename EigT, require_eigen_vt<is_var, EigT>* = nullptr>
-    static inline auto deep_copy(EigT&& arg) {
+     inline auto deep_copy(EigT&& arg) {
       return arg
-          .unaryExpr([](auto&& x) { return var(new vari(x.val(), false)); })
+          .unaryExpr([&](auto&& x) {
+                       vari_store_.emplace_back(instance_, x.val(), false);
+                       return var(&vari_store_.back());
+                     })
           .eval();
     }
 
+  };
 
 
+    /**
+     * Accumulates adjoints for a single var within the reduce.
+     * @tparam Pargs types of further arguments to accumulate over.
+     * @param dest points to values holding adjoint accumulate.
+     * @param x A var to accumulate the adjoint of.
+     * @param args Further args to accumulate over.
+     */
+    template <typename... Pargs>
+    static inline double* accumulate_adjoints(double* dest, const var& x,
+                                       Pargs&&... args) {
+      *dest += x.adj();
+      return accumulate_adjoints(dest + 1, std::forward<Pargs>(args)...);
+    }
+
+    /**
+     * Accumulates adjoints for a standard vector of vars within the reduce.
+     * @tparam VarVec the type of a standard container holding vars.
+     * @tparam Pargs types of further arguments to accumulate over.
+     * @param dest points to values holding adjoint accumulate.
+     * @param x A vector of vars to accumulate the adjoint of.
+     * @param args Further args to accumulate over.
+     */
+    template <typename VarVec, require_std_vector_vt<is_var, VarVec>* = nullptr,
+              typename... Pargs>
+    static inline double* accumulate_adjoints(double* dest, VarVec&& x,
+                                       Pargs&&... args) {
+      for (auto&& x_iter : x) {
+        *dest += x_iter.adj();
+        ++dest;
+      }
+      return accumulate_adjoints(dest, std::forward<Pargs>(args)...);
+    }
+
+    /**
+     * Accumulates adjoints for a standard vector of containers within the
+     * reduce.
+     * @tparam VecContainer the type of a standard container holding var
+     * containers.
+     * @tparam Pargs types of further arguments to accumulate over.
+     * @param dest points to values holding adjoint accumulate.
+     * @param x A vector of var containers to accumulate the adjoint of.
+     * @param args Further args to accumulate over.
+     */
+    template <typename VecContainer,
+              require_std_vector_st<is_var, VecContainer>* = nullptr,
+              require_std_vector_vt<is_container, VecContainer>* = nullptr,
+              typename... Pargs>
+    static inline double* accumulate_adjoints(double* dest, VecContainer&& x,
+                                       Pargs&&... args) {
+      for (auto&& x_iter : x) {
+        dest = accumulate_adjoints(dest, x_iter);
+      }
+      return accumulate_adjoints(dest, std::forward<Pargs>(args)...);
+    }
+
+    /**
+     * Accumulates adjoints for an eigen container within the reduce.
+     * @tparam EigT Type derived from `EigenBase` containing vars.
+     * @tparam Pargs types of further arguments to accumulate over.
+     * @param dest points to values holding adjoint accumulate.
+     * @param x An eigen type holding vars to accumulate over.
+     * @param args Further args to accumulate over.
+     */
+    template <typename EigT, require_eigen_vt<is_var, EigT>* = nullptr,
+              typename... Pargs>
+    static inline double* accumulate_adjoints(double* dest, EigT&& x,
+                                       Pargs&&... args) {
+      Eigen::Map<Eigen::MatrixXd>(dest, x.rows(), x.cols()) += x.adj();
+      return accumulate_adjoints(dest + x.size(), std::forward<Pargs>(args)...);
+    }
+
+    /**
+     * Specialization that is a no-op for Arithmetic types.
+     * @tparam Arith A type satisfying `std::is_arithmetic`.
+     * @tparam Pargs types of further arguments to accumulate over.
+     * @param dest points to values holding adjoint accumulate.
+     * @param x An object that is either arithmetic or a container of Arithmetic
+     *  types.
+     * @param args Further args to accumulate over.
+     */
+    template <typename Arith,
+              require_arithmetic_t<scalar_type_t<Arith>>* = nullptr,
+              typename... Pargs>
+    static inline double* accumulate_adjoints(double* dest, Arith&& x,
+                                       Pargs&&... args) {
+      return accumulate_adjoints(dest, std::forward<Pargs>(args)...);
+    }
+
+    static inline double* accumulate_adjoints(double* x) { return x; }
+
+
+  
+
+  /*
     class local_args {
       //const nested_rev_autodiff nested_context_;
       // not sure what the type is of the apply below => this gives a
@@ -174,11 +297,24 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
         ChainableStack::instance_ = local_instance;
       }
     };
+  */
 
-  using local_args_t = local_args;
-  using tls_local_args_t = tbb::enumerable_thread_specific< local_args_t >;
+  using args_tuple_copy_t = std::tuple<std::decay_t<Args>...>;
+
+  struct local_args {
+    local_context context_;
+    args_tuple_copy_t args_tuple_copy_;
+
+    template <typename... ArgsT>
+    local_args(ArgsT&&... args) :
+        context_(),
+        args_tuple_copy_(std::tuple<decltype(context_.deep_copy(args))...>(context_.deep_copy(args)...))
+    {}
+    
+  };
 
 
+  using tls_args_tuple_t = tbb::enumerable_thread_specific< local_args >;
   
   /**
    * Internal object used in `tbb::parallel_reduce`
@@ -190,21 +326,22 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
     double* sliced_partials_;  // Points to adjoints of the partial calculations
     Vec vmapped_;
     std::ostream* msgs_;
-    tls_local_args_t& tls_args_tuple_;
+    tls_args_tuple_t& tls_args_tuple_copy_;
     //std::tuple<Args...> args_tuple_;
     double sum_{0.0};
-    Eigen::VectorXd args_adjoints_{0};
+    //Eigen::VectorXd args_adjoints_{0};
 
     template <typename VecT>
     recursive_reducer(size_t per_job_sliced_terms, size_t num_shared_terms,
                       double* sliced_partials, VecT&& vmapped,
-                      std::ostream* msgs, tls_local_args_t& tls_args_tuple)
+                      std::ostream* msgs, tls_args_tuple_t& tls_args_tuple_copy)
         : per_job_sliced_terms_(per_job_sliced_terms),
           num_shared_terms_(num_shared_terms),
           sliced_partials_(sliced_partials),
           vmapped_(std::forward<VecT>(vmapped)),
           msgs_(msgs),
-          tls_args_tuple_(tls_args_tuple) {}
+          tls_args_tuple_copy_(tls_args_tuple_copy)
+    {}
 
     recursive_reducer(recursive_reducer& other, tbb::split)
         : per_job_sliced_terms_(other.per_job_sliced_terms_),
@@ -212,97 +349,7 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
           sliced_partials_(other.sliced_partials_),
           vmapped_(other.vmapped_),
           msgs_(other.msgs_),
-          tls_args_tuple_(other.tls_args_tuple_) {}
-
-    /**
-     * Accumulates adjoints for a single var within the reduce.
-     * @tparam Pargs types of further arguments to accumulate over.
-     * @param dest points to values holding adjoint accumulate.
-     * @param x A var to accumulate the adjoint of.
-     * @param args Further args to accumulate over.
-     */
-    template <typename... Pargs>
-    inline double* accumulate_adjoints(double* dest, const var& x,
-                                       Pargs&&... args) {
-      *dest += x.adj();
-      return accumulate_adjoints(dest + 1, std::forward<Pargs>(args)...);
-    }
-
-    /**
-     * Accumulates adjoints for a standard vector of vars within the reduce.
-     * @tparam VarVec the type of a standard container holding vars.
-     * @tparam Pargs types of further arguments to accumulate over.
-     * @param dest points to values holding adjoint accumulate.
-     * @param x A vector of vars to accumulate the adjoint of.
-     * @param args Further args to accumulate over.
-     */
-    template <typename VarVec, require_std_vector_vt<is_var, VarVec>* = nullptr,
-              typename... Pargs>
-    inline double* accumulate_adjoints(double* dest, VarVec&& x,
-                                       Pargs&&... args) {
-      for (auto&& x_iter : x) {
-        *dest += x_iter.adj();
-        ++dest;
-      }
-      return accumulate_adjoints(dest, std::forward<Pargs>(args)...);
-    }
-
-    /**
-     * Accumulates adjoints for a standard vector of containers within the
-     * reduce.
-     * @tparam VecContainer the type of a standard container holding var
-     * containers.
-     * @tparam Pargs types of further arguments to accumulate over.
-     * @param dest points to values holding adjoint accumulate.
-     * @param x A vector of var containers to accumulate the adjoint of.
-     * @param args Further args to accumulate over.
-     */
-    template <typename VecContainer,
-              require_std_vector_st<is_var, VecContainer>* = nullptr,
-              require_std_vector_vt<is_container, VecContainer>* = nullptr,
-              typename... Pargs>
-    inline double* accumulate_adjoints(double* dest, VecContainer&& x,
-                                       Pargs&&... args) {
-      for (auto&& x_iter : x) {
-        dest = accumulate_adjoints(dest, x_iter);
-      }
-      return accumulate_adjoints(dest, std::forward<Pargs>(args)...);
-    }
-
-    /**
-     * Accumulates adjoints for an eigen container within the reduce.
-     * @tparam EigT Type derived from `EigenBase` containing vars.
-     * @tparam Pargs types of further arguments to accumulate over.
-     * @param dest points to values holding adjoint accumulate.
-     * @param x An eigen type holding vars to accumulate over.
-     * @param args Further args to accumulate over.
-     */
-    template <typename EigT, require_eigen_vt<is_var, EigT>* = nullptr,
-              typename... Pargs>
-    inline double* accumulate_adjoints(double* dest, EigT&& x,
-                                       Pargs&&... args) {
-      Eigen::Map<Eigen::MatrixXd>(dest, x.rows(), x.cols()) += x.adj();
-      return accumulate_adjoints(dest + x.size(), std::forward<Pargs>(args)...);
-    }
-
-    /**
-     * Specialization that is a no-op for Arithmetic types.
-     * @tparam Arith A type satisfying `std::is_arithmetic`.
-     * @tparam Pargs types of further arguments to accumulate over.
-     * @param dest points to values holding adjoint accumulate.
-     * @param x An object that is either arithmetic or a container of Arithmetic
-     *  types.
-     * @param args Further args to accumulate over.
-     */
-    template <typename Arith,
-              require_arithmetic_t<scalar_type_t<Arith>>* = nullptr,
-              typename... Pargs>
-    inline double* accumulate_adjoints(double* dest, Arith&& x,
-                                       Pargs&&... args) {
-      return accumulate_adjoints(dest, std::forward<Pargs>(args)...);
-    }
-
-    inline double* accumulate_adjoints(double* x) { return x; }
+          tls_args_tuple_copy_(other.tls_args_tuple_copy_) {}
 
     /**
      * Within thread reduction.
@@ -312,24 +359,31 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
         return;
       }
 
+      /*
       if (args_adjoints_.size() == 0) {
         args_adjoints_ = Eigen::VectorXd::Zero(this->num_shared_terms_);
       }
+      */
 
       //local_args<decltype(args_tuple_)> local(args_tuple_);
       //local_args::args_tuple_copy_t& args_tuple_local_copy =
       //tls_args_tuple_.local().args_tuple_copy_;
-      auto& args_tuple_local_copy = tls_args_tuple_.local().get_clean_copy();
+      //auto& args_tuple_local_copy = tls_args_tuple_.local().get_clean_copy();
       // todo: zero adjoints of args_tuple_local as needed
+      //args_tuple_copy_t& local_args_tuple_copy = args_tuple_copy_[tbb::this_task_arena::current_thread_index()];
+      args_tuple_copy_t& local_args_tuple_copy = tls_args_tuple_copy_.local().args_tuple_copy_;
     
-      //const nested_rev_autodiff begin_nest;
+      const nested_rev_autodiff begin_nest;
 
       // create a deep copy of all var's so that these are not
       // linked to any outer AD tree
+
+      local_context context;
+      
       std::decay_t<Vec> local_sub_slice;
       local_sub_slice.reserve(r.size());
       for (int i = r.begin(); i < r.end(); ++i) {
-        local_sub_slice.emplace_back(deep_copy(vmapped_[i]));
+        local_sub_slice.emplace_back(context.deep_copy(vmapped_[i]));
       }
       
       /*
@@ -345,7 +399,7 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
             return ReduceFunction()(r.begin(), r.end() - 1, local_sub_slice,
                                     this->msgs_, args...);
           },
-          args_tuple_local_copy);
+          local_args_tuple_copy);
       //local.args_tuple_copy_);
 
       sub_sum_v.grad();
@@ -353,12 +407,16 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
       accumulate_adjoints(
           this->sliced_partials_ + r.begin() * per_job_sliced_terms_,
           local_sub_slice);
+
+      /* we just keep accumulating the adjoints in the args_tuple_copy
+      and collect from there at the very end
       apply(
           [&](auto&&... args) {
             return accumulate_adjoints(args_adjoints_.data(),
                                        std::forward<decltype(args)>(args)...);
           },
           std::forward<decltype(tls_args_tuple_.local().get_clean_copy())>(args_tuple_local_copy));
+      */
       // SW: Why did we use a move here? I hope forward is also fine.
       //std::move(local.args_tuple_copy_));
       //std::move(args_tuple_local_copy));
@@ -373,12 +431,14 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
      */
     void join(const recursive_reducer& rhs) {
       this->sum_ += rhs.sum_;
+      /*
       if (this->args_adjoints_.size() != 0 && rhs.args_adjoints_.size() != 0) {
         this->args_adjoints_ += rhs.args_adjoints_;
       } else if (this->args_adjoints_.size() == 0
                  && rhs.args_adjoints_.size() != 0) {
         this->args_adjoints_ = rhs.args_adjoints_;
       }
+      */
     }
   };
 
@@ -578,6 +638,7 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
             typename = require_all_t<std::is_same<Args, OpArgs>...>>
   inline var operator()(OpVec&& vmapped, std::size_t grainsize,
                         std::ostream* msgs, OpArgs&&... args) const {
+
     const std::size_t num_jobs = vmapped.size();
 
     if (num_jobs == 0) {
@@ -593,19 +654,26 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
     double* partials = ChainableStack::instance_->memalloc_.alloc_array<double>(
         num_sliced_terms + num_shared_terms);
 
-    for (size_t i = 0; i < num_sliced_terms; ++i) {
+    for (size_t i = 0; i < (num_sliced_terms + num_shared_terms); ++i) {
       partials[i] = 0.0;
     }
 
     double sum = 0.0;
 
     {
-      //std::tuple<OpArgs...> args_tuple(std::forward<OpArgs>(args)...);
-      tls_local_args_t tls_local_args(std::forward<OpArgs>(args)...);
-    
+      tls_args_tuple_t tls_args_tuple_copy(std::forward<OpArgs>(args)...);
+
+      /*
+      const std::size_t num_worker_threads = tbb::this_task_arena::max_concurrency();
+      std::vector<args_tuple_copy_t> args_tuple_copy;
+      args_tuple_copy.reserve(num_worker_threads);
+
+      for(std::size_t i = 0; i != num_worker_threads; ++i)
+        args_tuple_copy.emplace_back(context.deep_copy(args)...);
+      */
+      
       recursive_reducer worker(per_job_sliced_terms, num_shared_terms, partials,
-                               vmapped, msgs, tls_local_args);
-      //vmapped, msgs, args...);
+                               vmapped, msgs, tls_args_tuple_copy);
 
 #ifdef STAN_DETERMINISTIC
       tbb::inline_partitioner partitioner;
@@ -619,11 +687,27 @@ struct reduce_sum_impl<ReduceFunction, require_var_t<ReturnType>, ReturnType,
 
       save_varis(varis, std::forward<OpVec>(vmapped));
       save_varis(varis + num_sliced_terms, std::forward<OpArgs>(args)...);
-      
-      for (size_t i = 0; i < num_shared_terms; ++i) {
-        partials[num_sliced_terms + i] = worker.args_adjoints_(i);
-      }
 
+      /*
+      for(std::size_t i = 0; i != num_worker_threads; ++i) {
+        apply(
+          [&](auto&&... args) {
+            return accumulate_adjoints(partials + num_sliced_terms,
+                                       std::forward<decltype(args)>(args)...);
+          },
+          std::move(args_tuple_copy[i]));
+      }
+      */
+      tls_args_tuple_copy.combine_each(
+          [&](local_args& args_context) {
+            apply(
+                [&](auto&&... args) {
+                  return accumulate_adjoints(partials + num_sliced_terms,
+                                             std::forward<OpArgs>(args)...);
+                },
+                std::move(args_context.args_tuple_copy_));
+          });
+  
       sum = worker.sum_;
     }
       
