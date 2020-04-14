@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['real_5freturn',['real_return',['../d0/dc1/structstan_1_1real__return.html',1,'stan']]],
+  ['real_5freturn_3c_20t_2c_20ts_2e_2e_2e_20_3e',['real_return&lt; T, Ts... &gt;',['../df/df3/structstan_1_1real__return_3_01_t_00_01_ts_8_8_8_01_4.html',1,'stan']]],
+  ['recursive_5freducer',['recursive_reducer',['../d6/dcc/structstan_1_1math_1_1internal_1_1reduce__sum__impl_3_01_reduce_function_00_01require__var__t_3_a63935318039ad46e0be3e3377364cae.html',1,'stan::math::internal::reduce_sum_impl&lt; ReduceFunction, require_var_t&lt; ReturnType &gt;, ReturnType, Vec, Args... &gt;']]],
+  ['recursive_5freducer',['recursive_reducer',['../d2/d95/structstan_1_1math_1_1internal_1_1reduce__sum__impl_3_01_reduce_function_00_01require__arithmetic7aa0880925f32548c8d8450eea4993f.html',1,'stan::math::internal::reduce_sum_impl&lt; ReduceFunction, require_arithmetic_t&lt; ReturnType &gt;, ReturnType, Vec, Args... &gt;']]],
+  ['reduce_5fsum_5fimpl',['reduce_sum_impl',['../d8/d4d/structstan_1_1math_1_1internal_1_1reduce__sum__impl.html',1,'stan::math::internal']]],
+  ['reduce_5fsum_5fimpl_3c_20reducefunction_2c_20require_5farithmetic_5ft_3c_20returntype_20_3e_2c_20returntype_2c_20vec_2c_20args_2e_2e_2e_20_3e',['reduce_sum_impl&lt; ReduceFunction, require_arithmetic_t&lt; ReturnType &gt;, ReturnType, Vec, Args... &gt;',['../d8/dab/structstan_1_1math_1_1internal_1_1reduce__sum__impl_3_01_reduce_function_00_01require__arithmeti2fab780b550a5254e4547945de0025a3.html',1,'stan::math::internal']]],
+  ['reduce_5fsum_5fimpl_3c_20reducefunction_2c_20require_5fvar_5ft_3c_20returntype_20_3e_2c_20returntype_2c_20vec_2c_20args_2e_2e_2e_20_3e',['reduce_sum_impl&lt; ReduceFunction, require_var_t&lt; ReturnType &gt;, ReturnType, Vec, Args... &gt;',['../d5/d0e/structstan_1_1math_1_1internal_1_1reduce__sum__impl_3_01_reduce_function_00_01require__var__t_3_7f47d4520a3212af01301510113656e4.html',1,'stan::math::internal']]],
+  ['results_5fcl',['results_cl',['../d6/dba/classstan_1_1math_1_1results__cl.html',1,'stan::math']]],
+  ['return_5ftype',['return_type',['../d8/d68/structstan_1_1return__type.html',1,'stan']]],
+  ['return_5ftype_3c_20t_2c_20ts_2e_2e_2e_20_3e',['return_type&lt; T, Ts... &gt;',['../d4/d90/structstan_1_1return__type_3_01_t_00_01_ts_8_8_8_01_4.html',1,'stan']]],
+  ['rising_5ffactorial_5fvd_5fvari',['rising_factorial_vd_vari',['../d7/dee/classstan_1_1math_1_1internal_1_1rising__factorial__vd__vari.html',1,'stan::math::internal']]],
+  ['round_5f',['round_',['../d1/dba/classstan_1_1math_1_1round__.html',1,'stan::math']]],
+  ['round_5ffun',['round_fun',['../d4/d3f/structstan_1_1math_1_1round__fun.html',1,'stan::math']]],
+  ['round_5fvari',['round_vari',['../d8/da5/classstan_1_1math_1_1internal_1_1round__vari.html',1,'stan::math::internal']]],
+  ['rowwise_5fmax_5f',['rowwise_max_',['../d4/dc3/classstan_1_1math_1_1rowwise__max__.html',1,'stan::math']]],
+  ['rowwise_5fmin_5f',['rowwise_min_',['../d2/d5b/classstan_1_1math_1_1rowwise__min__.html',1,'stan::math']]],
+  ['rowwise_5freduction',['rowwise_reduction',['../d9/d60/classstan_1_1math_1_1rowwise__reduction.html',1,'stan::math']]],
+  ['rowwise_5freduction_3c_20rowwise_5fmax_5f_3c_20t_20_3e_2c_20t_2c_20max_5fop_3c_20std_3a_3aremove_5freference_5ft_3c_20t_20_3e_3a_3ascalar_20_3e_2c_20false_20_3e',['rowwise_reduction&lt; rowwise_max_&lt; T &gt;, T, max_op&lt; std::remove_reference_t&lt; T &gt;::Scalar &gt;, false &gt;',['../d9/d60/classstan_1_1math_1_1rowwise__reduction.html',1,'stan::math']]],
+  ['rowwise_5freduction_3c_20rowwise_5fmin_5f_3c_20t_20_3e_2c_20t_2c_20min_5fop_3c_20std_3a_3aremove_5freference_5ft_3c_20t_20_3e_3a_3ascalar_20_3e_2c_20false_20_3e',['rowwise_reduction&lt; rowwise_min_&lt; T &gt;, T, min_op&lt; std::remove_reference_t&lt; T &gt;::Scalar &gt;, false &gt;',['../d9/d60/classstan_1_1math_1_1rowwise__reduction.html',1,'stan::math']]],
+  ['rowwise_5freduction_3c_20rowwise_5fsum_5f_3c_20t_20_3e_2c_20t_2c_20sum_5fop_2c_20true_20_3e',['rowwise_reduction&lt; rowwise_sum_&lt; T &gt;, T, sum_op, true &gt;',['../d9/d60/classstan_1_1math_1_1rowwise__reduction.html',1,'stan::math']]],
+  ['rowwise_5fsum_5f',['rowwise_sum_',['../d6/d0a/classstan_1_1math_1_1rowwise__sum__.html',1,'stan::math']]],
+  ['rsqrt_5f',['rsqrt_',['../d0/d97/classstan_1_1math_1_1rsqrt__.html',1,'stan::math']]]
+];

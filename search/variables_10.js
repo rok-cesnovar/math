@@ -1,0 +1,11 @@
+var searchData=
+[
+  ['rank_5f',['rank_',['../de/d20/structstan_1_1math_1_1mpi__cluster.html#a7d4e2524602514d0c1cae3eba0623c6d',1,'stan::math::mpi_cluster']]],
+  ['re_5f',['re_',['../d7/d8c/classstan_1_1math_1_1complex__base.html#adda5884c966eb323857cf6f5b0ab729d',1,'stan::math::complex_base']]],
+  ['reduction',['reduction',['../d0/d6e/structstan_1_1math_1_1kernel__parts.html#a3dd29cb94a17364f186d5c99949337a0',1,'stan::math::kernel_parts']]],
+  ['rep_5fmatrix',['rep_matrix',['../dc/d5d/group__opencl__kernels.html#ga80314ffcb149d118c26e4d007472b1eb',1,'stan::math::opencl_kernels']]],
+  ['require_5fspecific_5flocal_5fsize',['require_specific_local_size',['../d7/d21/classstan_1_1math_1_1colwise__reduction.html#af3931512c0883833dbc7c4361f0bfd6a',1,'stan::math::colwise_reduction::require_specific_local_size()'],['../d8/dff/classstan_1_1math_1_1operation__cl.html#a4e99ee1c9c1c4dc05ac368bbdfd0e903',1,'stan::math::operation_cl::require_specific_local_size()']]],
+  ['row_5fvector_5fmatrix_5fmultiply',['row_vector_matrix_multiply',['../dc/d5d/group__opencl__kernels.html#gae3d5c43c1bc6eb3c13a0ce008e9d3523',1,'stan::math::opencl_kernels']]],
+  ['rows_5f',['rows_',['../da/d9b/classstan_1_1math_1_1block__.html#aff64541672c2b14a354a72e6e700d5f2',1,'stan::math::block_::rows_()'],['../d6/d12/classstan_1_1math_1_1internal_1_1matrix__scalar__divide__dv__vari.html#aeb08420576be6336b572e2707a0838f6',1,'stan::math::internal::matrix_scalar_divide_dv_vari::rows_()'],['../d7/da1/classstan_1_1math_1_1internal_1_1matrix__scalar__divide__vd__vari.html#ae1cd2012ab12aeb7eab548211fb288a8',1,'stan::math::internal::matrix_scalar_divide_vd_vari::rows_()'],['../da/d87/classstan_1_1math_1_1internal_1_1matrix__scalar__divide__vv__vari.html#ac5f81d142c9bbb1bf4bf94e83eb842e9',1,'stan::math::internal::matrix_scalar_divide_vv_vari::rows_()'],['../d9/d17/classstan_1_1math_1_1internal_1_1matrix__product__vari__n1.html#a13730075536fa88e0dfeab7f8bc9b249',1,'stan::math::internal::matrix_product_vari_n1::rows_()'],['../df/da1/classstan_1_1math_1_1internal_1_1matrix__product__vari.html#a177bbf350c9004aa8b07999979f1e2f7',1,'stan::math::internal::matrix_product_vari::rows_()']]],
+  ['rr_5fval_5f',['rr_val_',['../d1/d9d/classstan_1_1math_1_1idas__system.html#a48e35ceef0091be9fc3e35a5169663bf',1,'stan::math::idas_system']]]
+];

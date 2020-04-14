@@ -1,0 +1,5 @@
+var structstan_1_1math_1_1internal_1_1reduce__sum__impl_3_01_reduce_function_00_01require__var__t_3_7f47d4520a3212af01301510113656e4 =
+[
+    [ "recursive_reducer", "d6/dcc/structstan_1_1math_1_1internal_1_1reduce__sum__impl_3_01_reduce_function_00_01require__var__t_3_a63935318039ad46e0be3e3377364cae.html", "d6/dcc/structstan_1_1math_1_1internal_1_1reduce__sum__impl_3_01_reduce_function_00_01require__var__t_3_a63935318039ad46e0be3e3377364cae" ],
+    [ "operator()", "d5/d0e/structstan_1_1math_1_1internal_1_1reduce__sum__impl_3_01_reduce_function_00_01require__var__t_3_7f47d4520a3212af01301510113656e4.html#a9d490a669db83549d39bb273126ac2c3", null ]
+];
