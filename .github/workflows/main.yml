@@ -17,7 +17,7 @@ jobs:
       with:
         python-version: '3.x'
     - name: rtools setup
-      run: curl -s -o ../R-tools-win.exe -L https://cran.rstudio.com/bin/windows/Rtools/Rtools35.exe
+      run: Invoke-WebRequest -Uri https://cran.rstudio.com/bin/windows/Rtools/Rtools35.exe -OutFile R-tools-win.exe
     - name: version
       run: g++ --version
     - name: build
