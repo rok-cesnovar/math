@@ -15,7 +15,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
       with:
-        python-version: '3.x'
+        python-version: '2.x'
     - name: Download RTools
       run: Invoke-WebRequest -Uri https://cran.rstudio.com/bin/windows/Rtools/Rtools35.exe -OutFile ./R35.exe
     - name: Install RTools
@@ -35,4 +35,4 @@ jobs:
       run: mingw32-make --version
     - name: Run tests
       shell: powershell
-      run: python runTests.py -j8 -f ./test/unit
+      run: python runTests.py -j8 test/unit/
