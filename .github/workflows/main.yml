@@ -1,0 +1,24 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  build:
+
+    runs-on: windows-2016-gcc
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: rtools setup
+      run: curl -s -o ../R-tools-win.exe -L https://cran.rstudio.com/bin/windows/Rtools/Rtools35.exe
+    - name: version
+      run: g++ --version
+    - name: build
+      run: python runTests.py test/unit/math/prim/fun/add_test.cpp 
