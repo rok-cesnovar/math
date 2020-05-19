@@ -16,9 +16,23 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-    - name: rtools setup
-      run: Invoke-WebRequest -Uri https://cran.rstudio.com/bin/windows/Rtools/Rtools35.exe -OutFile R-tools-win.exe
-    - name: version
+    - name: Download RTools
+      run: Invoke-WebRequest -Uri https://cran.rstudio.com/bin/windows/Rtools/Rtools35.exe -OutFile ./R35.exe
+    - name: Install RTools
+      shell: powershell
+      run: Start-Process -FilePath ./R35.exe -ArgumentList /VERYSILENT -NoNewWindow -Wait
+    - name: PATH Setup
+      shell: powershell
+      run: echo "::add-path::C:/Rtools/bin"
+    - name: PATH Setup
+      shell: powershell
+      run: echo "::add-path::C:/Rtools/mingw_64/bin"
+    - name: Check g++ version
+      shell: powershell
       run: g++ --version
-    - name: build
-      run: python runTests.py test/unit/math/prim/fun/add_test.cpp 
+    - name: Check mingw32-make version
+      shell: powershell
+      run: mingw32-make --version
+    - name: Run tests
+      shell: powershell
+      run: python runTests.py test/unit/*_test.cpp
