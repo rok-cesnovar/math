@@ -12,6 +12,7 @@
 #include <stan/math/prim/fun/sum.hpp>
 #include <stan/math/prim/fun/value_of_rec.hpp>
 #include <stan/math/opencl/copy.hpp>
+#include <stan/math/opencl/multiply.hpp>
 #include <stan/math/opencl/kernel_generator.hpp>
 #include <stan/math/opencl/kernels/neg_binomial_2_log_glm_lpmf.hpp>
 #include <vector>
@@ -98,8 +99,6 @@ return_type_t<T_alpha, T_beta, T_precision> neg_binomial_2_log_glm_lpmf(
   const auto& beta_val_vec = as_column_vector_or_scalar(beta_val);
   const auto& alpha_val_vec = as_column_vector_or_scalar(alpha_val);
   const auto& phi_val_vec = as_column_vector_or_scalar(phi_val);
-
-  const auto& phi_arr = as_array_or_scalar(phi_val_vec);
 
   const int local_size
       = opencl_kernels::neg_binomial_2_log_glm.get_option("LOCAL_SIZE_");

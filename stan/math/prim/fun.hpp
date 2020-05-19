@@ -74,7 +74,9 @@
 #include <stan/math/prim/fun/dot.hpp>
 #include <stan/math/prim/fun/dot_product.hpp>
 #include <stan/math/prim/fun/dot_self.hpp>
+#include <stan/math/prim/fun/eigenvalues.hpp>
 #include <stan/math/prim/fun/eigenvalues_sym.hpp>
+#include <stan/math/prim/fun/eigenvectors.hpp>
 #include <stan/math/prim/fun/eigenvectors_sym.hpp>
 #include <stan/math/prim/fun/elt_divide.hpp>
 #include <stan/math/prim/fun/elt_multiply.hpp>
@@ -239,6 +241,8 @@
 #include <stan/math/prim/fun/proj.hpp>
 #include <stan/math/prim/fun/promote_elements.hpp>
 #include <stan/math/prim/fun/promote_scalar.hpp>
+#include <stan/math/prim/fun/pseudo_eigenvalues.hpp>
+#include <stan/math/prim/fun/pseudo_eigenvectors.hpp>
 #include <stan/math/prim/fun/qr_Q.hpp>
 #include <stan/math/prim/fun/qr_R.hpp>
 #include <stan/math/prim/fun/qr_thin_Q.hpp>
@@ -302,6 +306,7 @@
 #include <stan/math/prim/fun/to_array_1d.hpp>
 #include <stan/math/prim/fun/to_array_2d.hpp>
 #include <stan/math/prim/fun/to_matrix.hpp>
+#include <stan/math/prim/fun/to_ref.hpp>
 #include <stan/math/prim/fun/to_row_vector.hpp>
 #include <stan/math/prim/fun/to_vector.hpp>
 #include <stan/math/prim/fun/trace.hpp>

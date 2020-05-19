@@ -12,6 +12,7 @@
 #include <stan/math/opencl/copy.hpp>
 #include <stan/math/opencl/kernel_generator.hpp>
 #include <stan/math/opencl/matrix_cl.hpp>
+#include <stan/math/opencl/multiply.hpp>
 #include <stan/math/opencl/kernels/ordered_logistic_glm_lpmf.hpp>
 #include <cmath>
 
@@ -81,9 +82,6 @@ return_type_t<T_beta_scalar, T_cuts_scalar> ordered_logistic_glm_lpmf(
 
   const auto& beta_val = value_of_rec(beta);
   const auto& cuts_val = value_of_rec(cuts);
-
-  const auto& beta_val_vec = as_column_vector_or_scalar(beta_val);
-  const auto& cuts_val_vec = as_column_vector_or_scalar(cuts_val);
 
   operands_and_partials<Eigen::Matrix<T_beta_scalar, Eigen::Dynamic, 1>,
                         Eigen::Matrix<T_cuts_scalar, Eigen::Dynamic, 1>>
