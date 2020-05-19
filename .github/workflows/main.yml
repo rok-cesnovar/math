@@ -35,4 +35,4 @@ jobs:
       run: mingw32-make --version
     - name: Run tests
       shell: powershell
-      run: python runTests.py -j8 test\unit
+      run: python runTests.py -j8 ./test/unit
