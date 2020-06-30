@@ -7,6 +7,7 @@
 #include <stan/math/prim/fun/col.hpp>
 #include <stan/math/prim/fun/transpose.hpp>
 #include <stan/math/prim/fun/exp.hpp>
+#include <stan/math/prim/fun/to_ref.hpp>
 #include <stan/math/prim/fun/value_of.hpp>
 #include <stan/math/prim/core.hpp>
 #include <vector>
@@ -15,7 +16,7 @@ namespace stan {
 namespace math {
 
 template <typename T_omega, typename T_Gamma, typename T_rho, typename T_alpha>
-inline auto hmm_marginal_lpdf_val(
+inline auto hmm_marginal_val(
     const Eigen::Matrix<T_omega, Eigen::Dynamic, Eigen::Dynamic>& omegas,
     const Eigen::Matrix<T_Gamma, Eigen::Dynamic, Eigen::Dynamic>& Gamma_val,
     const Eigen::Matrix<T_rho, Eigen::Dynamic, 1>& rho_val,
@@ -56,7 +57,6 @@ inline auto hmm_marginal_lpdf_val(
  * The transition matrix Gamma is such that the (i, j)th entry is the
  * probability that x_n = j given x_{n - 1} = i. The rows of Gamma are
  * simplexes.
- * The Gamma argument is only checked if there is at least one transition.
  *
  * @tparam T_omega type of the log likelihood matrix
  * @tparam T_Gamma type of the transition matrix
@@ -72,7 +72,7 @@ inline auto hmm_marginal_lpdf_val(
  *         of Gamma are not a simplex (when there is at least one transition).
  */
 template <typename T_omega, typename T_Gamma, typename T_rho>
-inline auto hmm_marginal_lpdf(
+inline auto hmm_marginal(
     const Eigen::Matrix<T_omega, Eigen::Dynamic, Eigen::Dynamic>& log_omegas,
     const Eigen::Matrix<T_Gamma, Eigen::Dynamic, Eigen::Dynamic>& Gamma,
     const Eigen::Matrix<T_rho, Eigen::Dynamic, 1>& rho) {
@@ -83,15 +83,7 @@ inline auto hmm_marginal_lpdf(
   int n_states = log_omegas.rows();
   int n_transitions = log_omegas.cols() - 1;
 
-  check_consistent_size("hmm_marginal_lpdf", "rho", rho, n_states);
-  check_simplex("hmm_marginal_lpdf", "rho", rho);
-  check_square("hmm_marginal_lpdf", "Gamma", Gamma);
-  check_nonzero_size("hmm_marginal_lpdf", "Gamma", Gamma);
-  check_multiplicable("hmm_marginal_lpdf", "Gamma", Gamma, "log_omegas",
-                      log_omegas);
-  for (int i = 0; i < Gamma.rows(); ++i) {
-    check_simplex("hmm_marginal_lpdf", "Gamma[i, ]", row(Gamma, i + 1));
-  }
+  hmm_check(log_omegas, Gamma, rho, "hmm_marginal");
 
   operands_and_partials<Eigen::Matrix<T_omega, Eigen::Dynamic, Eigen::Dynamic>,
                         Eigen::Matrix<T_Gamma, Eigen::Dynamic, Eigen::Dynamic>,
@@ -100,13 +92,13 @@ inline auto hmm_marginal_lpdf(
 
   eig_matrix_partial alphas(n_states, n_transitions + 1);
   eig_vector_partial alpha_log_norms(n_transitions + 1);
-  auto Gamma_val = value_of(Gamma);
+  const auto& Gamma_val = to_ref(value_of(Gamma));
 
   // compute the density using the forward algorithm.
-  auto rho_val = value_of(rho);
+  const auto& rho_val = to_ref(value_of(rho));
   eig_matrix_partial omegas = value_of(log_omegas).array().exp();
   T_partial_type norm_norm;
-  auto log_marginal_density = hmm_marginal_lpdf_val(
+  auto log_marginal_density = hmm_marginal_val(
       omegas, Gamma_val, rho_val, alphas, alpha_log_norms, norm_norm);
 
   // Variables required for all three Jacobian-adjoint products.
