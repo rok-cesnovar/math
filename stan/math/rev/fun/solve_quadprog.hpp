@@ -316,9 +316,8 @@ solve_quadprog(const Eigen::Matrix<T0, -1, -1> &G,
   /* compute the inverse of the factorized matrix G^-1, this is the initial
    * value for H */
   //J = L^-T
-  Eigen::Matrix<T0, -1, -1> Li = (1e-14 < L.array().abs()).select(L, 0.0f);
-  auto J = stan::math::mdivide_left_tri_low(Li);
-  J.transposeInPlace();
+  // Eigen::Matrix<T0, -1, -1> Li = (1e-14 < L.array().abs()).select(L, 0.0f);
+  auto J = stan::math::transpose(stan::math::mdivide_left_tri_low(L));
   auto c2 = J.trace();
 #ifdef TRACE_SOLVER
   print_matrix("J", J, n);
@@ -646,9 +645,8 @@ auto
   /* **CHANGE HERE** 
    * J is only called once and trace is the same regardless of transpose 
    * also change chol to L */
-  Eigen::Matrix<T0, -1, -1> Li = (1e-14 < L.array().abs()).select(L, 0.0f);
-  auto J = stan::math::mdivide_left_tri_low(Li);
-  J.transposeInPlace();
+ // Eigen::Matrix<T0, -1, -1> Li = (1e-14 < L.array().abs()).select(L, 0.0f);
+  auto J = stan::math::transpose(stan::math::mdivide_left_tri_low(L));
   auto c2 = J.trace();
  // std::cout << c2 << "\n";
 #ifdef TRACE_SOLVER
