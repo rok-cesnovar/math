@@ -1,0 +1,35 @@
+name: Distribution tests
+
+on:
+  push:
+    branches: [ develop ]
+    paths-ignore:
+      - 'doygen/**'
+      - 'hooks/**'
+      - 'licenses/**'
+      - 'LICENSE.md'
+      - 'README.md'
+      - 'RELEASE-NOTES.txt'
+  pull_request:
+    branches: [ develop ]
+    
+jobs:
+  full:
+    name: Full unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '2.x'
+    - name: Run full unit tests
+      run: |
+        echo "N_TESTS=1500" >> make/local
+        ./runTests.py -j2 test/prob
+    - name: Upload gtest_output xml
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: gtest_outputs_xml
+        path: '**/*_test.xml'
