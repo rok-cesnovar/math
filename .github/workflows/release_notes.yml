@@ -8,7 +8,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Obtain release notes
-      run: ./scripts/release_notes.py > release_notes.txt
+      run: |
+        pip3 install urllib3
+        ./scripts/release_notes.py > release_notes.txt
 
     - name: Upload release notes
       uses: actions/upload-artifact@v2
