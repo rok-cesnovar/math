@@ -14,7 +14,7 @@ on:
       - 'RELEASE-NOTES.txt'
 jobs:
   windows:
-    name: Full unit tests
+    name: Windows header checks
     runs-on: windows-latest
 
     steps:
@@ -23,25 +23,13 @@ jobs:
       with:
         python-version: '2.x'
     
-    - name: Download & install RTools
-      run: |
-        Invoke-WebRequest -Uri https://cran.r-project.org/bin/windows/Rtools/rtools40-x86_64.exe -OutFile ./R40.exe
-        Start-Process -FilePath ./R40.exe -ArgumentList /VERYSILENT -NoNewWindow -Wait
-      shell: powershell
-    
-    - name: PATH Setup
-      run: |
-        echo "::add-path::C:/rtools40/usr/bin"
-        echo "::add-path::C:/rtools40/mingw64/bin"
-      shell: powershell
-    
     - name: Print g++ version and path
       run: |
         g++ --version
         Get-Command g++ | Select-Object -ExpandProperty Definition
       shell: powershell
     
-    - name: Print mingw32-make version
+    - name: Print mingw32-make version and path
       run: |
         mingw32-make --version
         Get-Command mingw32-make | Select-Object -ExpandProperty Definition
