@@ -16,5 +16,5 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: release_notes.txt
-        path: './release_notes'
+        path: './release_notes.txt'
       
