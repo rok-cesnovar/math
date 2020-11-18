@@ -44,10 +44,10 @@ jobs:
       run: echo "D:/a/math/math/lib/tbb" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
     - name: Run full unit tests
       shell: powershell
-      run: python.exe runTests.py -j2 test/unit/*_test.cpp
+      run: python.exe runTests.py -j2 test\unit\*_test.cpp
     - name: Run full unit tests
       shell: powershell
-      run: python.exe runTests.py -j2 test/unit/math/*_test.cpp
+      run: python.exe runTests.py -j2 test\unit\math\*_test.cpp
     - name: Upload gtest_output xml
       uses: actions/upload-artifact@v2
       if: failure()
