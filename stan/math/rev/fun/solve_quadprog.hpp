@@ -91,9 +91,9 @@
 
 namespace stan {
 namespace math {
- 
 
-template <typename Scalar> 
+
+template <typename Scalar>
 inline Scalar distance(Scalar a, Scalar b) {
   Scalar a1, b1, t;
   a1 = fabs(a);
@@ -278,14 +278,14 @@ solve_quadprog(const Eigen::Matrix<T0, -1, -1> &G,
   int n = g0.size();
   int p = ce0.size();
   int m = ci0.size();
-  
+
   using T_return = return_type_t<T0, T1, T2, T3, T4, T5>;
   Eigen::Matrix<T_return, -1, 1> np(n), u(m + p), d(n), z(n), r(m + p), s(m + p), u_old(m + p);
   Eigen::Matrix<T_return, -1, 1> x_old(n);
   const double inf = std::numeric_limits<double>::infinity();
-  
+
   T_return sum, psi, ss, t1;
-  
+
   Eigen::VectorXi A(m + p), A_old(m + p), iai(m + p);
   int q;
   int iq, iter = 0;
@@ -312,12 +312,12 @@ solve_quadprog(const Eigen::Matrix<T0, -1, -1> &G,
   Eigen::Matrix<T0, -1, -1> R(G.rows(), G.cols());
   R.setZero();
   T_return R_norm = 1.0; /* this variable will hold the norm of the matrix R */
-  
+
   /* compute the inverse of the factorized matrix G^-1, this is the initial
    * value for H */
   //J = L^-T
   // Eigen::Matrix<T0, -1, -1> Li = (1e-14 < L.array().abs()).select(L, 0.0f);
-  auto J = stan::math::transpose(stan::math::mdivide_left_tri_low(L));
+  auto J = stan::math::transpose( stan::math::mdivide_left_tri_low(L));
   auto c2 = J.trace();
 #ifdef TRACE_SOLVER
   print_matrix("J", J, n);
@@ -330,60 +330,61 @@ solve_quadprog(const Eigen::Matrix<T0, -1, -1> &G,
    * this is a feasible point in the dual space
    * x = G^-1 * g0
    */
-  
-  auto x = multiply(stan::math::multiply_lower_tri_self_transpose(J), g0);
-  x = -x;
-  
-  /* and compute the current solution value */
-  auto f_value = 0.5 * g0.dot(x);
+   auto x = stan::math::mdivide_left_spd(G, g0);
+   //auto x = multiply(stan::math::multiply_lower_tri_self_transpose(J), g0);
+   // auto x = multiply(inverse(G), g0);
+   x = -x;
+
+   /* and compute the current solution value */
+   auto f_value = 0.5 * g0.dot(x);
 #ifdef TRACE_SOLVER
-  std::cerr << "Unconstrained solution: " << f_value << std::endl;
-  print_vector("x", x, n);
+   std::cerr << "Unconstrained solution: " << f_value << std::endl;
+   print_vector("x", x, n);
 #endif
-  /* Add equality constraints to the working set A */
-  iq = 0;
-  T_return t2 = 0.0;
-  T_return t = 0.0;
-  for (i = 0; i < me; i++) {
-    np = CE.col(i);
-    compute_d(d, J, np);
-    update_z(z, J, d, iq);
-    update_r(R, r, d, iq);
+   /* Add equality constraints to the working set A */
+   iq = 0;
+   T_return t2 = 0.0;
+   T_return t = 0.0;
+   for (i = 0; i < me; i++) {
+       np = CE.col(i);
+       compute_d(d, J, np);
+       update_z(z, J, d, iq);
+       update_r(R, r, d, iq);
 #ifdef TRACE_SOLVER
-    print_matrix("R", R, iq);
-    print_vector("z", z, n);
-    print_vector("r", r, iq);
-    print_vector("d", d, n);
+       print_matrix("R", R, iq);
+       print_vector("z", z, n);
+       print_vector("r", r, iq);
+       print_vector("d", d, n);
 #endif
 
-    /* compute full step length t2: i.e., the minimum step in primal space s.t.
-       the contraint becomes feasible */
-    t2 = 0.0;
-    if (abs(z.dot(z)) > std::numeric_limits<double>::epsilon()) {
-      // i.e. z != 0
-      t2 = (-np.dot(x) - ce0(i)) / z.dot(np);
-    }
+       /* compute full step length t2: i.e., the minimum step in primal space s.t.
+          the contraint becomes feasible */
+       t2 = 0.0;
+       if (abs(z.dot(z)) > std::numeric_limits<double>::epsilon()) {
+           // i.e. z != 0
+           t2 = (-np.dot(x) - ce0(i)) / z.dot(np);
+       }
 
-    x += t2 * z;
+       x += t2 * z;
 
-    /* set u = u+ */
-    u(iq) = t2;
-    u.head(iq) -= t2 * r.head(iq);
+       /* set u = u+ */
+       u(iq) = t2;
+       u.head(iq) -= t2 * r.head(iq);
 
-    /* compute the new solution value */
-    f_value += 0.5 * (t2 * t2) * z.dot(np);
-    A(i) = -i - 1;
+       /* compute the new solution value */
+       f_value += 0.5 * (t2 * t2) * z.dot(np);
+       A(i) = -i - 1;
 
-    if (!add_constraint(R, J, d, iq, R_norm)) {
-      // FIXME: it should raise an error
-      // Equality constraints are linearly dependent
-      return x;
-    }
-  }
-  
-  /* set iai = K \ A */
-  for (i = 0; i < mi; i++)
-    iai(i) = i;
+       if (!add_constraint(R, J, d, iq, R_norm)) {
+           // FIXME: it should raise an error
+           // Equality constraints are linearly dependent
+           return x;
+       }
+   }
+
+   /* set iai = K \ A */
+   for (i = 0; i < mi; i++)
+      iai(i) = i;
 
 l1:
   iter++;
@@ -411,7 +412,7 @@ l1:
 #ifdef TRACE_SOLVER
   print_vector("s", s, mi);
 #endif
-  
+
   if (fabs(psi) <=
       mi * std::numeric_limits<double>::epsilon() * c1 * c2 * 100.0) {
     /* numerically there are not infeasibilities anymore */
@@ -447,7 +448,7 @@ l2: /* Step 2: check for feasibility and determine a new S-pair */
   std::cerr << "Trying with constraint " << ip << std::endl;
   print_vector("np", np, n);
 #endif
-  
+
 l2a: /* Step 2a: determine step direction */
   /* compute z = H np: the step direction in the primal space (through J, see
    * the paper) */
@@ -606,69 +607,72 @@ auto
   int n = g0.size();
   int p = ce0.size();
   int m = ci0.size();
-  
+
   using T_return = return_type_t<T0, T1, T2, T3, T4, T5>;
   Eigen::Matrix<T_return, -1, 1> np(n), u(m + p), d(n), z(n), r(m + p), s(m + p), u_old(m + p);
   Eigen::Matrix<T_return, -1, 1> x_old(n);
   const double inf = std::numeric_limits<double>::infinity();
-  
+
   T_return sum, psi, ss, t1;
-  
+
   Eigen::VectorXi A(m + p), A_old(m + p), iai(m + p);
   int q;
   int iq, iter = 0;
   bool iaexcl[m + p];
-  
+
   me = p; /* number of equality constraints */
   mi = m; /* number of inequality constraints */
   q = 0;  /* size of the active set A (containing the indices of the active
    constraints) */
-  
+
   /*
    * Preprocessing phase
    */
-  
+
   /* compute the trace of the original matrix G */
-   auto c1 = tcrossprod(L).trace(); 
-   /* initialize the matrix R */
+  auto G = stan::math::multiply_lower_tri_self_transpose(L);
+  auto c1 = G.trace();
+  /* initialize the matrix R */
   d.setZero();
-  
+
   /*  compute the trace of the original matrix G */
   /* **CHANGE HERE** G to L */
   Eigen::Matrix<T0, -1, -1> R(L.rows(), L.cols());
   R.setZero();
   T_return R_norm = 1.0; /* this variable will hold the norm of the matrix R */
-  
+
   /* compute the inverse of the factorized matrix G^-1, this is the initial
    * value for H */
   //J = L^-T
-  /* **CHANGE HERE** 
-   * J is only called once and trace is the same regardless of transpose 
+  /* **CHANGE HERE**
+   * J is only called once and trace is the same regardless of transpose
    * also change chol to L */
- // Eigen::Matrix<T0, -1, -1> Li = (1e-14 < L.array().abs()).select(L, 0.0f);
-  auto J = stan::math::transpose(stan::math::mdivide_left_tri_low(L));
+  // Eigen::Matrix<T0, -1, -1> Li = (1e-14 < L.array().abs()).select(L, 0.0f);
+  auto J = stan::math::transpose( stan::math::mdivide_left_tri_low(L));
   auto c2 = J.trace();
- // std::cout << c2 << "\n";
+  // std::cout << c2 << "\n";
 #ifdef TRACE_SOLVER
   print_matrix("J", J, n);
 #endif
-  
+
   /* c1 * c2 is an estimate for cond(G) */
-  
+
   /*
    * Find the unconstrained minimizer of the quadratic form 0.5 * x G x + g0 x
    * this is a feasible point in the dual space
    * x = G^-1 * g0
    */
-  
-  /* G^-1 = (L^-1)^T (L^-1) 
+
+  /* G^-1 = (L^-1)^T (L^-1)
    * https://forum.kde.org/viewtopic.php?f=74&t=127426
    * */
-  /* **CHANGE HERE** 
+  /* **CHANGE HERE**
    * can use J here so don't need to compute inverse again */
-  auto x = multiply(stan::math::multiply_lower_tri_self_transpose(J), g0);
+  //auto x = multiply(stan::math::multiply_lower_tri_self_transpose(J), g0);
+  //auto x = stan::math::mdivide_left_spd(G, g0);
+  auto x = stan::math::mdivide_left_spd(G, g0);
   x = -x;
-  
+
   /* and compute the current solution value */
   auto f_value = 0.5 * g0.dot(x);
 #ifdef TRACE_SOLVER
@@ -680,45 +684,45 @@ auto
   T_return t2 = 0.0;
   T_return t = 0.0;
   for (i = 0; i < me; i++) {
-    np = CE.col(i);
-    compute_d(d, J, np);
-    update_z(z, J, d, iq);
-    update_r(R, r, d, iq);
+      np = CE.col(i);
+      compute_d(d, J, np);
+      update_z(z, J, d, iq);
+      update_r(R, r, d, iq);
 #ifdef TRACE_SOLVER
-    print_matrix("R", R, iq);
-    print_vector("z", z, n);
-    print_vector("r", r, iq);
-    print_vector("d", d, n);
+      print_matrix("R", R, iq);
+      print_vector("z", z, n);
+      print_vector("r", r, iq);
+      print_vector("d", d, n);
 #endif
 
-    /* compute full step length t2: i.e., the minimum step in primal space s.t.
-       the contraint becomes feasible */
-    t2 = 0.0;
-    if (abs(z.dot(z)) > std::numeric_limits<double>::epsilon()) {
-      // i.e. z != 0
-      t2 = (-np.dot(x) - ce0(i)) / z.dot(np);
-    }
+      /* compute full step length t2: i.e., the minimum step in primal space s.t.
+         the contraint becomes feasible */
+      t2 = 0.0;
+      if (abs(z.dot(z)) > std::numeric_limits<double>::epsilon()) {
+          // i.e. z != 0
+          t2 = (-np.dot(x) - ce0(i)) / z.dot(np);
+      }
 
-    x += t2 * z;
+      x += t2 * z;
 
-    /* set u = u+ */
-    u(iq) = t2;
-    u.head(iq) -= t2 * r.head(iq);
+      /* set u = u+ */
+      u(iq) = t2;
+      u.head(iq) -= t2 * r.head(iq);
 
-    /* compute the new solution value */
-    f_value += 0.5 * (t2 * t2) * z.dot(np);
-    A(i) = -i - 1;
+      /* compute the new solution value */
+      f_value += 0.5 * (t2 * t2) * z.dot(np);
+      A(i) = -i - 1;
 
-    if (!add_constraint(R, J, d, iq, R_norm)) {
-      // FIXME: it should raise an error
-      // Equality constraints are linearly dependent
-      return x;
-    }
+      if (!add_constraint(R, J, d, iq, R_norm)) {
+          // FIXME: it should raise an error
+          // Equality constraints are linearly dependent
+          return x;
+      }
   }
-  
+
   /* set iai = K \ A */
   for (i = 0; i < mi; i++)
-    iai(i) = i;
+      iai(i) = i;
 
 l1:
   iter++;
@@ -746,7 +750,7 @@ l1:
 #ifdef TRACE_SOLVER
   print_vector("s", s, mi);
 #endif
-  
+
   if (fabs(psi) <=
       mi * std::numeric_limits<double>::epsilon() * c1 * c2 * 100.0) {
     /* numerically there are not infeasibilities anymore */
@@ -782,7 +786,7 @@ l2: /* Step 2: check for feasibility and determine a new S-pair */
   std::cerr << "Trying with constraint " << ip << std::endl;
   print_vector("np", np, n);
 #endif
-  
+
 l2a: /* Step 2a: determine step direction */
   /* compute z = H np: the step direction in the primal space (through J, see
    * the paper) */
