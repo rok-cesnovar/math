@@ -17,15 +17,13 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt install -y ocl-icd-opencl-dev clinfo
+        sudo apt install -y ocl-icd-opencl-dev clinfo beignet
 
     - name: Print system info
       run: |
         g++ --version
         make --version
         clinfo
-        sudo lshw
-        cat /proc/cpuinfo  | grep 'name'| uniq
 
     - name: Run tests
       run: |
