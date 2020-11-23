@@ -19,10 +19,11 @@ jobs:
         sudo apt-get update
         sudo apt install -y ocl-icd-opencl-dev clinfo
 
-    - name: Print g++ and make version
+    - name: Print system info
       run: |
         g++ --version
         make --version
+        clinfo
 
     - name: Run tests
       run: |
