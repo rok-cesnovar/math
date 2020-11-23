@@ -47,7 +47,7 @@ jobs:
       
     - name: Run tests
       run: |
-        ./runTests.py test/unit/math/opencl
+        ./runTests.py test/unit/math/opencl/prim
 
     - name: Upload gtest_output xml
       uses: actions/upload-artifact@v2
