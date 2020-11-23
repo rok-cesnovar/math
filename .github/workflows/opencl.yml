@@ -17,7 +17,11 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt install -y clinfo beignet
+        sudo apt install -y clinfo beignet xz-utils unzip
+        wget http://registrationcenter-download.intel.com/akdlm/irc_nas/11396/SRB4.1_linux64.zip
+        unzip SRB*.zip
+        cd SRB*
+        ls .        
 
     - name: Print system info
       run: |
