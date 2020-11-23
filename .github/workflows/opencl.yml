@@ -1,0 +1,30 @@
+name: OpenCL tests
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Print g++ and make version
+      run: |
+        g++ --version
+        make --version
+    - name: Run tests
+      run: |
+        ./runTests.py test/unit/math/prim/fun/add_test.cpp
+
+    - name: Upload gtest_output xml
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: gtest_outputs_xml
+        path: '**/*_test.xml'
