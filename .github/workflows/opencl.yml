@@ -17,7 +17,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt install -y ocl-icd-opencl-dev clinfo beignet
+        sudo apt install -y clinfo beignet
 
     - name: Print system info
       run: |
@@ -25,9 +25,15 @@ jobs:
         make --version
         clinfo
 
+    - name: Set OpenCL makefile flags
+      run: |
+        echo "STAN_OPENCL=true" > make/local
+        echo "OPENCL_PLATFORM_ID=0" >>  make/local
+        echo "OPENCL_DEVICE_ID=0" >>  make/local
+      
     - name: Run tests
       run: |
-        ./runTests.py test/unit/math/prim/fun/add_test.cpp
+        ./runTests.py test/unit/math/opencl/prim/add_test.cpp
 
     - name: Upload gtest_output xml
       uses: actions/upload-artifact@v2
