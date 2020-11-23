@@ -29,6 +29,7 @@ jobs:
         find intel-opencl -name "libOpenCL.so"
         sudo cp -R intel-opencl/* /
         sudo ldconfig
+        sudo ln -s /opt/intel/opencl/libOpenCL.so /usr/lib/libOpenCL.so
         sudo apt install -y clinfo
 
     - name: Print system info
