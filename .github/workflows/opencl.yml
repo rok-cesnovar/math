@@ -18,10 +18,10 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt install -y clinfo beignet xz-utils unzip
-        wget http://registrationcenter-download.intel.com/akdlm/irc_nas/11396/SRB4.1_linux64.zip
         mkdir intel-install
-        unzip SRB*.zip intel-install
         cd intel-install
+        wget http://registrationcenter-download.intel.com/akdlm/irc_nas/11396/SRB4.1_linux64.zip
+        unzip SRB*.zip        
         ls .        
 
     - name: Print system info
