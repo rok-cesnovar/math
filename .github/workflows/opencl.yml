@@ -1,4 +1,4 @@
-name: OpenCL tests
+name: OpenCL
 
 on:
   push:
@@ -8,16 +8,22 @@ on:
 
 jobs:
   build:
-
+    name: test/unit/math/opencl
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt install -y ocl-icd-opencl-dev clinfo
+
     - name: Print g++ and make version
       run: |
         g++ --version
         make --version
+
     - name: Run tests
       run: |
         ./runTests.py test/unit/math/prim/fun/add_test.cpp
