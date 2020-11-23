@@ -35,8 +35,7 @@ jobs:
     - name: Print system info
       run: |
         g++ --version
-        make --version
-        
+        make --version        
         clinfo
 
     - name: Set OpenCL makefile flags
@@ -47,6 +46,7 @@ jobs:
       
     - name: Run tests
       run: |
+        clinfo
         ./runTests.py test/unit/math/opencl/prim/add_test.cpp
 
     - name: Upload gtest_output xml
