@@ -26,7 +26,7 @@ jobs:
         tar -C intel-opencl -Jxf intel-opencl-r4.1-*.x86_64.tar.xz
         tar -C intel-opencl -Jxf intel-opencl-devel-r4.1-*.x86_64.tar.xz
         tar -C intel-opencl -Jxf intel-opencl-cpu-r4.1-*.x86_64.tar.xz
-        ls intel-opencl
+        find intel-opencl -name "libOpenCL.so"
         sudo cp -R intel-opencl/* /
         sudo ldconfig
         sudo apt install -y clinfo
@@ -35,7 +35,7 @@ jobs:
       run: |
         g++ --version
         make --version
-        find / -name *libOpenCL.so*
+        
         clinfo
 
     - name: Set OpenCL makefile flags
