@@ -144,7 +144,7 @@ jobs:
     - name: Run mix/fun unit tests
       shell: powershell
       run: |
-        echo "O=1 | Out-File -Append -FilePath "D:/a/math/math/make/local" -Encoding utf8
+        echo "O=1" | Out-File -Append -FilePath "D:/a/math/math/make/local" -Encoding utf8
         python.exe runTests.py test/unit/math/mix/fun
         
     - name: Upload gtest_output xml
