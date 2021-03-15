@@ -51,6 +51,7 @@ jobs:
     - name: Run prim and rev unit tests
       shell: powershell
       run: |
+        echo "O=0" > make/local
         python.exe runTests.py -j2 test/unit/*_test.cpp
         python.exe runTests.py -j2 test/unit/math/*_test.cpp
         python.exe runTests.py -j2 test/unit/math/prim
@@ -96,6 +97,7 @@ jobs:
     - name: Run fwd unit tests and all the mix tests except those in mix/fun
       shell: powershell
       run: |
+        echo "O=0" > make/local
         python.exe runTests.py test/unit/math/fwd
         python.exe runTests.py test/unit/math/mix/core
         python.exe runTests.py test/unit/math/mix/functor
@@ -142,6 +144,7 @@ jobs:
     - name: Run mix/fun unit tests
       shell: powershell
       run: |
+        echo "O=0" > make/local
         python.exe runTests.py test/unit/math/mix/fun
         
     - name: Upload gtest_output xml
